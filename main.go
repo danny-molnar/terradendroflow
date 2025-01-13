@@ -5,11 +5,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
 func main() {
-	filePath := "tfplan.stdout"      
+	filePath := "tfplan.stdout"
 	outputPath := "prettified_plan.md"
 
 	err := parseAndPrettifyStdout(filePath, outputPath)
@@ -37,7 +38,23 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 
 	outputFile.WriteString("# Prettified Terraform Plan\n\n")
 
+	stats := map[string]int{
+		"Created": 0,
+		"Updated": 0,
+		"Deleted": 0,
+		"Replaced": 0,
+		"Read": 0,
+	}
+
 	scanner := bufio.NewScanner(file)
+	resources := map[string][]string{
+		"Created":  {},
+		"Updated":  {},
+		"Deleted":  {},
+		"Replaced": {},
+		"Read":     {},
+	}
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
@@ -49,9 +66,8 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 		if isResourceLine(line) {
 			resource := extractResourceName(line)
 			action := determineAction(line)
-			output := fmt.Sprintf("- **%s**: `%s`\n", action, resource)
-			fmt.Print(output)
-			outputFile.WriteString(output)
+			stats[action]++
+			resources[action] = append(resources[action], resource)
 		}
 	}
 
@@ -59,18 +75,33 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 		return err
 	}
 
+	// Write grouped resources to the markdown file
+	for action, resList := range resources {
+		if len(resList) > 0 {
+			outputFile.WriteString(fmt.Sprintf("## %s Resources\n\n", action))
+			for _, res := range resList {
+				outputFile.WriteString(fmt.Sprintf("- `%s`\n", res))
+			}
+			outputFile.WriteString("\n")
+		}
+	}
+
+	// Print summary statistics to stdout
+	fmt.Println("Summary of changes:")
+	for action, count := range stats {
+		fmt.Printf("- %s: %d\n", action, count)
+	}
+
 	return nil
 }
 
 // isAttributeLine checks if a line is likely an attribute, JSON fragment, or brace
 func isAttributeLine(line string) bool {
-	// Skip lines that are single braces, empty braces, or JSON-like fragments
 	return line == "{" || line == "}" || strings.HasPrefix(line, "\"") || strings.HasSuffix(line, ")")
 }
 
 // isInvalidLine checks if a line contains irrelevant or invalid content
 func isInvalidLine(line string) bool {
-	// Skip lines that are irrelevant, such as single characters or invalid fragments
 	return line == "[" || line == "]" || len(line) < 3
 }
 
@@ -84,21 +115,18 @@ func isResourceLine(line string) bool {
 		strings.HasPrefix(line, "<= data")
 }
 
-// extractResourceName extracts the resource identifier from a plan line
+// extractResourceName extracts the full resource identifier from a resource line
 func extractResourceName(line string) string {
+	re := regexp.MustCompile(`"(.*?)"\s+"(.*?)"`)
+	matches := re.FindStringSubmatch(line)
+	if len(matches) == 3 {
+		return fmt.Sprintf("%s.%s", matches[1], matches[2])
+	}
+
 	parts := strings.Fields(line)
-
-	// Handle resource lines starting with +, ~, -, or +/-
-	if len(parts) > 2 && (strings.HasPrefix(parts[0], "+") || strings.HasPrefix(parts[0], "~") || strings.HasPrefix(parts[0], "-") || strings.HasPrefix(parts[0], "+/-")) {
-		return parts[1] // The second part typically contains the full resource identifier
+	if len(parts) > 2 {
+		return parts[1]
 	}
-
-	// Handle lines starting with <= data
-	if len(parts) > 2 && strings.HasPrefix(parts[0], "<=") {
-		return parts[1] // The second part contains the data source identifier
-	}
-
-	// Fallback for unknown lines
 	return "unknown resource"
 }
 
