@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	filePath := "tfplan.stdout"
-	outputPath := "prettified_plan.md"
+	filePath := "tfplan.stdout"      // Replace with your actual stdout file path
+	outputPath := "prettified_plan.md" // Output markdown file
 
 	err := parseAndPrettifyStdout(filePath, outputPath)
 	if err != nil {
@@ -55,8 +55,16 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 		"Read":     {},
 	}
 
+	currentIdentifier := ""
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+
+		// Check for full identifier line
+		if strings.HasPrefix(line, "# module.") {
+			currentIdentifier = strings.TrimPrefix(line, "# ")
+			continue
+		}
 
 		// Skip lines that are likely attributes or JSON fragments
 		if isAttributeLine(line) || isInvalidLine(line) {
@@ -65,6 +73,10 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 
 		if isResourceLine(line) {
 			resource := extractResourceName(line)
+			if currentIdentifier != "" {
+				resource = currentIdentifier
+				currentIdentifier = ""
+			}
 			action := determineAction(line)
 			stats[action]++
 			resources[action] = append(resources[action], resource)
@@ -75,12 +87,12 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 		return err
 	}
 
-	// Write grouped resources to the markdown file
+	// Write grouped resources with full identifiers to the markdown file
 	for action, resList := range resources {
 		if len(resList) > 0 {
 			outputFile.WriteString(fmt.Sprintf("## %s Resources\n\n", action))
 			for _, res := range resList {
-				outputFile.WriteString(fmt.Sprintf("- `%s`\n", res))
+				outputFile.WriteString(fmt.Sprintf("%s\n", res))
 			}
 			outputFile.WriteString("\n")
 		}
@@ -125,7 +137,7 @@ func extractResourceName(line string) string {
 
 	parts := strings.Fields(line)
 	if len(parts) > 2 {
-		return parts[1]
+		return fmt.Sprintf("%s.%s", parts[1], parts[2]) // Ensure full identifier with type and name
 	}
 	return "unknown resource"
 }
