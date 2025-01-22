@@ -1,0 +1,36 @@
+name: TDFlow CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Run tests
+        run: go test ./... -v
+      - name: Lint code
+        run: golangci-lint run
+      - name: Build binaries
+        run: |
+          mkdir -p release
+          GOOS=linux GOARCH=amd64 go build -o release/tdflow_linux main.go
+          GOOS=darwin GOARCH=amd64 go build -o release/tdflow_mac main.go
+          GOOS=windows GOARCH=amd64 go build -o release/tdflow_windows.exe main.go
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: release/
