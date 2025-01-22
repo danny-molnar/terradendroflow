@@ -1,0 +1,27 @@
+# module.test_module.module.example_resource.aws_instance.example will be created
++ resource "aws_instance" "example" {
+    + ami           = "ami-12345678"
+    + instance_type = "t2.micro"
+  }
+
+# module.test_module.module.example_resource.aws_s3_bucket.example will be updated in-place
+~ resource "aws_s3_bucket" "example" {
+    bucket = "example-bucket"
+  }
+
+# module.test_module.module.example_resource.aws_security_group.example will be deleted
+- resource "aws_security_group" "example" {
+    name = "example-sg"
+  }
+
+# module.test_module.module.example_resource.aws_lambda_function.example will be replaced
++/- resource "aws_lambda_function" "example" {
+    function_name = "example-function"
+  }
+
+# module.test_module.module.example_resource.data.aws_iam_role.example will be read during apply
+<= data "aws_iam_role" "example" {
+    arn = "arn:aws:iam::123456789012:role/example-role"
+  }
+
+Plan: 1 to add, 1 to change, 1 to destroy.
