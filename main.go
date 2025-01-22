@@ -3,6 +3,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -10,16 +11,23 @@ import (
 )
 
 func main() {
-	filePath := "tfplan.stdout"      // Replace with your actual stdout file path
-	outputPath := "prettified_plan.md" // Output markdown file
+	// Define flags for input and output file paths
+	inputFilePath := flag.String("input", "", "Path to the input Terraform plan stdout file")
+	outputFilePath := flag.String("output", "prettified_plan.md", "Path to the output markdown file")
+	flag.Parse()
 
-	err := parseAndPrettifyStdout(filePath, outputPath)
+	if *inputFilePath == "" {
+		fmt.Println("Error: Input file path is required")
+		os.Exit(1)
+	}
+
+	err := parseAndPrettifyStdout(*inputFilePath, *outputFilePath)
 	if err != nil {
 		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Prettified plan saved to", outputPath)
+	fmt.Println("Prettified plan saved to", *outputFilePath)
 }
 
 // parseAndPrettifyStdout parses the Terraform stdout plan and writes a prettified output to a markdown file
@@ -39,11 +47,11 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 	outputFile.WriteString("# Prettified Terraform Plan\n\n")
 
 	stats := map[string]int{
-		"Created": 0,
-		"Updated": 0,
-		"Deleted": 0,
+		"Created":  0,
+		"Updated":  0,
+		"Deleted":  0,
 		"Replaced": 0,
-		"Read": 0,
+		"Read":     0,
 	}
 
 	scanner := bufio.NewScanner(file)
