@@ -1,0 +1,13 @@
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+run:
+  timeout: 5m
+  tests: true
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 50
+  max-same-issues: 5
