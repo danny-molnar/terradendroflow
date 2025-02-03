@@ -32,7 +32,7 @@ jobs:
           GOOS=darwin GOARCH=amd64 go build -o release/tdflow_mac main.go
           GOOS=windows GOARCH=amd64 go build -o release/tdflow_windows.exe main.go
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: release/
