@@ -1,3 +1,4 @@
+// main_test.go
 package main
 
 import (
@@ -20,5 +21,9 @@ func TestParseAndPrettifyStdout(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(outputFile)
+	if _, err := os.Stat(outputFile); err == nil {
+		if err := os.Remove(outputFile); err != nil {
+			t.Fatalf("Failed to remove output file: %v", err)
+		}
+	}
 }

@@ -36,15 +36,26 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("Failed to close input file: %v\n", err)
+		}
+	}()
 
 	outputFile, err := os.Create(outputPath)
 	if err != nil {
 		return err
 	}
-	defer outputFile.Close()
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			fmt.Printf("Failed to close output file: %v\n", err)
+		}
+	}()
 
-	outputFile.WriteString("# Prettified Terraform Plan\n\n")
+	if _, err := outputFile.WriteString("# Prettified Terraform Plan\n\n"); err != nil {
+		fmt.Printf("Failed to write header to output file: %v\n", err)
+		return err
+	}
 
 	stats := map[string]int{
 		"Created":  0,
@@ -98,11 +109,20 @@ func parseAndPrettifyStdout(filePath, outputPath string) error {
 	// Write grouped resources with full identifiers to the markdown file
 	for action, resList := range resources {
 		if len(resList) > 0 {
-			outputFile.WriteString(fmt.Sprintf("## %s Resources\n\n", action))
-			for _, res := range resList {
-				outputFile.WriteString(fmt.Sprintf("%s\n", res))
+			if _, err := outputFile.WriteString(fmt.Sprintf("## %s Resources\n\n", action)); err != nil {
+				fmt.Printf("Failed to write resource group to output file: %v\n", err)
+				return err
 			}
-			outputFile.WriteString("\n")
+			for _, res := range resList {
+				if _, err := outputFile.WriteString(fmt.Sprintf("%s\n", res)); err != nil {
+					fmt.Printf("Failed to write resource to output file: %v\n", err)
+					return err
+				}
+			}
+			if _, err := outputFile.WriteString("\n"); err != nil {
+				fmt.Printf("Failed to write newline to output file: %v\n", err)
+				return err
+			}
 		}
 	}
 
