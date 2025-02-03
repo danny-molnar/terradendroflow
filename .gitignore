@@ -29,4 +29,13 @@ tfplan.json
 tfplan.stdout
 prettified_plan.md
 
+# Ignore Go build artifacts
+*.exe
+*.out
+*.test
+*.bin
 terradendroflow
+
+# Ignore test output files
+testdata/output.md
+prettified_plan.md
